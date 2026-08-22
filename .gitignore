@@ -1,0 +1,13 @@
+.venv/
+.env
+.env.*
+.snowflake/
+**/.snowflake/
+__pycache__/
+*.pyc
+
+# Runtime and generated artifacts
+logs/
+airflow/logs/
+**/target/
+*.log

@@ -1,0 +1,29 @@
+version: 2
+
+models:
+
+  - name: int_orders_deduped
+
+    description: "Standardised order records."
+
+    columns:
+
+      - name: order_id
+        description: "Unique order identifier."
+        data_tests:
+          - not_null
+
+      - name: customer_id
+        description: "Customer who placed the order."
+        data_tests:
+          - not_null
+
+      - name: status
+        description: "Current status of the order."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values:
+                - completed
+                - pending
+                - cancelled

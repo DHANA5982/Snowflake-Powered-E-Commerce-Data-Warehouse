@@ -1,0 +1,7 @@
+customer_id,first_name,last_name,email,country,created_at
+1001,John,Smith,john.smith@email.com,UK,2025-01-15
+1002,Emma,Wilson,emma.wilson@email.com,UK,2025-01-18
+1003,Michael,Brown,michael.brown@email.com,USA,2025-02-02
+1004,Sophia,Taylor,sophia.taylor@email.com,Canada,2025-02-10
+1005,Daniel,Anderson,daniel.anderson@email.com,UK,2025-02-15
+1006,David,Wilson,david.wilson@email.com,UK,2025-04-01
