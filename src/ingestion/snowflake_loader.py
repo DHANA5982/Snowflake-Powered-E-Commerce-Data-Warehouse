@@ -14,6 +14,7 @@ load_dotenv()
 TABLE_CONFIG = {
     "customers.csv": {
         "target_table": "RAW_CUSTOMERS",
+        "key_column": "customer_id",
         "columns": [
             "customer_id",
             "first_name",
@@ -26,6 +27,7 @@ TABLE_CONFIG = {
 
     "products.csv": {
         "target_table": "RAW_PRODUCTS",
+        "key_column": "product_id",
         "columns": [
             "product_id",
             "product_name",
@@ -36,6 +38,7 @@ TABLE_CONFIG = {
 
     "orders.csv": {
         "target_table": "RAW_ORDERS",
+        "key_column": "order_id",
         "columns": [
             "order_id",
             "customer_id",
@@ -46,6 +49,7 @@ TABLE_CONFIG = {
 
     "order_items.csv": {
         "target_table": "RAW_ORDER_ITEMS",
+        "key_column": "order_item_id",
         "columns": [
             "order_item_id",
             "order_id",
@@ -86,7 +90,7 @@ def check_file_already_processed(connection, file_hash, target_table):
 
     try: 
         query = """
-            SELECT COUNT(*),
+            SELECT COUNT(*)
             FROM INGESTION_FILE_LOG
             WHERE file_hash = %s
                 AND target_table = %s
@@ -139,42 +143,81 @@ def copy_into_raw(
     file_name,
     target_table,
     columns,
+    key_column,
     pipeline_run_id,
 ):
     cursor = connection.cursor()
 
     try:
         source_columns = ",\n                    ".join(
-            f"${index}"
-            for index in range(1, len(columns) + 1)
+            f"${index} AS {column}"
+            for index, column in enumerate(columns, start=1)
         )
 
         target_columns = ",\n                ".join(columns)
 
-        copy_sql = f"""
-            COPY INTO {target_table}
+        staged_columns = ",\n                ".join(
+            f"s.{column}"
+            for column in columns
+        )
+
+        comparison = " OR\n                  ".join(
+            f"COALESCE(TO_VARCHAR(s.{column}), '')"
+            f"<> COALESCE(TO_VARCHAR(r.{column}), '')"
+            for column in columns
+            if column != key_column
+        )
+
+        insert_sql = f"""
+            INSERT INTO {target_table}
             (
                 {target_columns},
                 _source_file,
                 _ingestion_timestamp,
                 _pipeline_run_id
             )
-            FROM (
+
+            WITH staged_data AS (
                 SELECT
-                    {source_columns},
-                    METADATA$FILENAME,
-                    CURRENT_TIMESTAMP(),
-                    '{pipeline_run_id}'
+                    {source_columns}
                 FROM @{stage_name}/{file_name}
+                (FILE_FORMAT => 'CSV_FORMAT')
+            ),
+
+            latest_raw AS (
+                SELECT *
+                FROM {target_table}
+                QUALIFY ROW_NUMBER() OVER(
+                    PARTITION BY {key_column}
+                    ORDER BY _ingestion_timestamp DESC
+                ) = 1
             )
-            FILE_FORMAT = "CSV_FORMAT"
+
+            SELECT
+                {staged_columns},
+                '{file_name}',
+                CURRENT_TIMESTAMP(),
+                '{pipeline_run_id}'
+            FROM staged_data s
+            LEFT JOIN latest_raw r
+                ON s.{key_column} = r.{key_column}
+
+            WHERE
+                r.{key_column} IS NULL
+                OR {comparison}
+
         """
 
-        print(f"Loading {file_name} into {target_table}...")
+        print(
+            f"Loading new/changed rows from "
+            f"{file_name} into {target_table}..."
+        )
 
-        cursor.execute(copy_sql)
+        cursor.execute(insert_sql)
 
-        return cursor.fetchall()
+        rows_loaded = cursor.rowcount
+
+        return rows_loaded
 
     finally:
         cursor.close()
@@ -229,6 +272,8 @@ def main():
         files = get_files_to_process(data_directory)
         print(f"Found {len(files)} files to process.")
 
+        run_id = generate_pipeline_run_id()
+
         for file_path in files:
 
             file_name = file_path.name
@@ -236,8 +281,8 @@ def main():
 
             target_table = config["target_table"]
             columns = config["columns"]
+            key_column = config["key_column"]
 
-            run_id = generate_pipeline_run_id()
             file_hash = calculate_file_hash(file_path)
 
             print("\n" + "=" * 60)
@@ -264,19 +309,14 @@ def main():
                     stage_name,
                 )
 
-                results = copy_into_raw(
+                rows_loaded = copy_into_raw(
                     connection,
                     stage_name,
                     file_name,
                     target_table,
                     columns,
+                    key_column,
                     run_id,
-                )
-
-                rows_loaded = sum(
-                    int(row[3])
-                    for row in results
-                    if len(row) > 3 and row[3] is not None
                 )
 
                 record_ingestion(
@@ -314,96 +354,4 @@ def main():
 
 
 if __name__ == "__main__":
-
-    data_directory = "data/raw"
-    stage_name = "ECOMMERCE_RAW_STAGE"
-
-    connection = get_snowflake_connection()
-
-    try:
-
-        files = get_files_to_process(data_directory)
-        print(f"Found {len(files)} files to process.")
-
-        for file_path in files:
-
-            file_name = file_path.name
-            config = TABLE_CONFIG[file_name]
-
-            target_table = config["target_table"]
-            columns = config["columns"]
-
-            run_id = generate_pipeline_run_id()
-            file_hash = calculate_file_hash(file_path)
-
-            print("\n" + "=" * 60)
-            print(f"Pipeline run ID: {run_id}")
-            print(f"File: {file_name}")
-            print(f"Target: {target_table}")
-            print(f"Hash: {file_hash}")
-
-            already_processed = check_file_already_processed(
-                connection,
-                file_hash,
-                target_table)
-
-            if already_processed:
-                print(f"File already processed. Skipping.")
-                continue
-
-            try:
-                print("New File detected.")
-
-                upload_file_to_stage(
-                    connection,
-                    str(file_path),
-                    stage_name,
-                )
-
-                results = copy_into_raw(
-                    connection,
-                    stage_name,
-                    file_name,
-                    target_table,
-                    columns,
-                    run_id,
-                )
-
-                rows_loaded = sum(
-                    int(row[3])
-                    for row in results
-                    if len(row) > 3 and row[3] is not None
-                )
-
-                record_ingestion(
-                    connection,
-                    file_name,
-                    file_hash,
-                    target_table,
-                    run_id,
-                    "SUCCESS",
-                    rows_loaded
-                )
-
-                print(
-                    f"SUCCESS: {file_name} → "
-                    f"{target_table}, ({rows_loaded} rows loaded.)"
-                )
-            except Exception as error:
-
-                record_ingestion(
-                    connection,
-                    file_name,
-                    file_hash,
-                    target_table,
-                    run_id,
-                    "FAILED",
-                    0,
-                    str(error)
-                )
-                
-                print(f"Pipeline failed: {error}")
-                raise
-
-    finally:
-        connection.close()
+    main()

@@ -1,13 +1,27 @@
+# Python
 .venv/
+venv/
+__pycache__/
+*.pyc
+
+# Secrets / environment variables
 .env
 .env.*
 .snowflake/
 **/.snowflake/
-__pycache__/
-*.pyc
 
 # Runtime and generated artifacts
 logs/
 airflow/logs/
 **/target/
+**/dbt_packages/
 *.log
+
+# Airflow local runtime
+airflow/.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
