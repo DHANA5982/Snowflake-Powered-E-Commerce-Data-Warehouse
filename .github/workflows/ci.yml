@@ -63,20 +63,15 @@ jobs:
 
             - name: Validate dbt profile structure
               run: |
-                python - <<'PY'
+                python -c "
                 import yaml
-
-                with open("/home/runner/.dbt/profiles.yml") as f:
-                    profile = yaml.safe_load(f)
-                
-                config = profile["ecommerce_dbt"]
-
-                assert config["target"] == "ci"
-                assert "ci" in config["outputs"]
-                assert config["outputs"]["ci"]["type"] == "snowflake"
-
-                print("dbt profile structure is valid")
-                py
+                p = yaml.safe_load(open('/home/runner/.dbt/profiles.yml'))
+                c = p['ecommerce_dbt']
+                assert c['target'] == 'ci'
+                assert 'ci' in c['outputs']
+                assert c['outputs']['ci']['type'] == 'snowflake'
+                print('dbt profile structure is valid')
+                "
 
             - name: Test Snowflake connection
               working-directory: ecommerce_dbt
