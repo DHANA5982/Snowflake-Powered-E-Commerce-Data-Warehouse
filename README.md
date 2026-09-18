@@ -1,5 +1,15 @@
 # Snowflake-Powered E-Commerce Data Warehouse
 
+![CI](https://github.com/DHANA5982/Snowflake-Powered-E-Commerce-Data-Warehouse/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/DHANA5982/Snowflake-Powered-E-Commerce-Data-Warehouse/actions/workflows/cd.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python&logoColor=white)
+![Snowflake](https://img.shields.io/badge/Warehouse-Snowflake-29B5E8?logo=snowflake&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-1.12.5-FF694B?logo=dbt&logoColor=white)
+![Airflow](https://img.shields.io/badge/Orchestration-Apache%20Airflow-017CEE?logo=apacheairflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+![Environments](https://img.shields.io/badge/Environments-DEV%20%7C%20CI%20%7C%20PROD-success)
+
 An end-to-end data engineering project that ingests e-commerce source data into Snowflake, performs incremental and idempotent loading, transforms raw data into analytics-ready dimensional models with dbt, orchestrates the pipeline with Apache Airflow, and implements automated CI/CD using GitHub Actions.
 
 The project demonstrates practical implementation of modern data engineering patterns including **incremental ingestion, change detection, data quality testing, dimensional modelling, workflow orchestration, environment isolation, Git-based development, and automated deployment**.
