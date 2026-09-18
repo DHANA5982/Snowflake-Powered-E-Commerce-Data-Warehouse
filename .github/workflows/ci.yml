@@ -34,6 +34,25 @@ jobs:
               run: |
                 dbt --version
 
+            - name: Create dbt profile directory
+              run: |
+                mkdir -p ~/.dbt
+                cat > ~/.dbt/profiles.yml << 'EOF'
+                ecommerce_dbt:
+                    target: ci
+                    outputs:
+                        ci:
+                            type: snowflake
+                            account: dummy
+                            user: dummy
+                            password: dummy
+                            role: dummy
+                            database: dummy
+                            warehouse: dummy
+                            schema: dummy
+                            threads: 1
+                EOF
+
             - name: Parse dbt project
               working-directory: ecommerce_dbt
               run: |
