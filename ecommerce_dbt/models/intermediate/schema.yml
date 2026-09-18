@@ -23,7 +23,5 @@ models:
         data_tests:
           - not_null
           - accepted_values:
-              values:
-                - completed
-                - pending
-                - cancelled
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
