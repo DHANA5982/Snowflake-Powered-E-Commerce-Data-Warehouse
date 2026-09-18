@@ -34,7 +34,15 @@ jobs:
               run: |
                 dbt --version
 
-            - name: Create dbt profile directory
+            - name: Create dbt profile
+              env:
+                SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+                SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+                SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+                SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+                SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
               run: |
                 mkdir -p ~/.dbt
                 cat > ~/.dbt/profiles.yml << 'EOF'
@@ -43,15 +51,20 @@ jobs:
                     outputs:
                         ci:
                             type: snowflake
-                            account: dummy
-                            user: dummy
-                            password: dummy
-                            role: dummy
-                            database: dummy
-                            warehouse: dummy
-                            schema: dummy
-                            threads: 1
+                            account: "$SNOWFLAKE_ACCOUNT"
+                            user: "$SNOWFLAKE_USER"
+                            password: "$SNOWFLAKE_PASSWORD"
+                            role: "$SNOWFLAKE_ROLE"
+                            database: "$SNOWFLAKE_DATABASE"
+                            warehouse: "$SNOWFLAKE_WAREHOUSE"
+                            schema: "$SNOWFLAKE_SCHEMA"
+                            threads: 4
                 EOF
+
+            - name: Test Snowflake connection
+              working-directory: ecommerce_dbt
+              run: |
+                            dbt debug
 
             - name: Parse dbt project
               working-directory: ecommerce_dbt
