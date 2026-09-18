@@ -82,3 +82,8 @@ jobs:
               working-directory: ecommerce_dbt
               run: |
                 dbt parse
+
+            - name: Build and test dbt project
+              working-directory: ecommerce_dbt
+              run: |
+                dbt build
